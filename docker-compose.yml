@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fiba-ref-postgres
+    environment:
+      POSTGRES_DB: fiba_referee_db
+      POSTGRES_USER: fiba_app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ChangeMeStrongDbPass!2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fiba_app -d fiba_referee_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fiba-ref-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fiba_referee_db
+      SPRING_DATASOURCE_USERNAME: fiba_app
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-ChangeMeStrongDbPass!2026}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-FibaRefAcademySuperSecretSigningKeyMustBeAtLeast64BytesLong2026!}
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
+      APP_VIDEO_STORAGE_DIR: /app/uploads/videos
+      APP_VIDEO_SEED_DIR: /app/seed-videos
+      APP_PDF_DIR: /app/rulebook-pdfs
+      APP_SEED_ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fibaref.org}
+      APP_SEED_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminFiba#2026!}
+    ports:
+      - "8080:8080"
+    volumes:
+      - video_uploads:/app/uploads/videos
+      - ./media/seed-videos:/app/seed-videos:ro
+      - ./media/rulebook-pdfs:/app/rulebook-pdfs:ro
+
+volumes:
+  postgres_data:
+  video_uploads:
