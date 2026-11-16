@@ -93,7 +93,7 @@ public class QuestionService {
 
     @Transactional(readOnly = true)
     public List<AdminQuestionResponse> listAdminQuestions() {
-        return questionRepository.findAllByOrderByIdAsc()
+        return questionRepository.findAllWithOptionsOrderByIdAsc()
                 .stream()
                 .map(this::toAdminResponse)
                 .toList();

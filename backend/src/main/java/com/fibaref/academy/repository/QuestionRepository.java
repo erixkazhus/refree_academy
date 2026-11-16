@@ -12,6 +12,9 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 
     List<Question> findAllByOrderByIdAsc();
 
+    @Query("SELECT DISTINCT q FROM Question q LEFT JOIN FETCH q.options ORDER BY q.id ASC")
+    List<Question> findAllWithOptionsOrderByIdAsc();
+
     List<Question> findByCategoryIgnoreCaseOrderByIdAsc(String category);
 
     @Query("SELECT q FROM Question q WHERE LOWER(q.title) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\' " +
