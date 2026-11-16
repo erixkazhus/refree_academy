@@ -169,13 +169,17 @@ public class VideoStorageService {
             return false;
         }
         try {
-            URI uri = URI.create(remoteUrl);
-            return "https".equalsIgnoreCase(uri.getScheme())
-                    && "www.basketref.com".equalsIgnoreCase(uri.getHost())
-                    && uri.getPort() == -1
-                    && uri.getPath() != null
-                    && uri.getPath().startsWith("/media/")
-                    && !uri.getPath().contains("..");
+            URI uri = URI.create(remoteUrl.trim().replace(" ", "%20"));
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            String path = uri.getPath();
+            if (host == null || path == null || path.contains("..") || uri.getPort() != -1) {
+                return false;
+            }
+            boolean allowedBasketref = "www.basketref.com".equalsIgnoreCase(host) && "https".equalsIgnoreCase(scheme);
+            boolean allowedJatekvezeto = "www.jatekvezeto.hu".equalsIgnoreCase(host)
+                    && ("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme));
+            return (allowedBasketref || allowedJatekvezeto) && path.startsWith("/media/");
         } catch (IllegalArgumentException ex) {
             return false;
         }
@@ -198,18 +202,37 @@ public class VideoStorageService {
         }
         Path temp = storageDir.resolve(filename + ".part").normalize();
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(remoteUrl))
-                    .timeout(Duration.ofSeconds(30))
-                    .header("User-Agent", "Mozilla/5.0")
-                    .header("Referer", "https://www.basketref.com/hun_file/media_pubplayer.php?param=&filter=&tip=")
-                    .GET()
-                    .build();
-            HttpResponse<Path> res = httpClient.send(req, HttpResponse.BodyHandlers.ofFile(temp));
-            if (res.statusCode() >= 200 && res.statusCode() < 300 && Files.size(temp) > 4096) {
-                Files.move(temp, dest, StandardCopyOption.REPLACE_EXISTING);
-                return dest;
+            String currentUrl = remoteUrl;
+            // Keep Redirect.NEVER on HttpClient and follow at most 2 hops only onto explicitly allowlisted hosts
+            for (int hop = 0; hop <= 2; hop++) {
+                if (!isAllowedRemoteVideoUrl(currentUrl)) {
+                    return null;
+                }
+                URI targetUri = URI.create(currentUrl.trim().replace(" ", "%20"));
+                HttpRequest req = HttpRequest.newBuilder(targetUri)
+                        .timeout(Duration.ofSeconds(30))
+                        .header("User-Agent", "Mozilla/5.0")
+                        .header("Referer", "https://www.basketref.com/hun_file/media_pubplayer.php?param=&filter=&tip=")
+                        .GET()
+                        .build();
+                HttpResponse<Path> res = httpClient.send(req, HttpResponse.BodyHandlers.ofFile(temp));
+                int status = res.statusCode();
+                if (status >= 200 && status < 300 && Files.size(temp) > 4096) {
+                    Files.move(temp, dest, StandardCopyOption.REPLACE_EXISTING);
+                    return dest;
+                }
+                Files.deleteIfExists(temp);
+                if (status >= 300 && status < 400) {
+                    Optional<String> location = res.headers().firstValue("Location");
+                    if (location.isEmpty()) {
+                        return null;
+                    }
+                    String rawLocation = location.get().trim().replace(" ", "%20");
+                    currentUrl = targetUri.resolve(rawLocation).toString();
+                    continue;
+                }
+                return null;
             }
-            Files.deleteIfExists(temp);
         } catch (Exception ex) {
             try {
                 Files.deleteIfExists(temp);
