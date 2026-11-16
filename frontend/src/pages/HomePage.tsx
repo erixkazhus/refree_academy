@@ -22,7 +22,7 @@ export const HomePage: React.FC = () => {
       <section className="mt-6 relative bg-[#1b1a15] text-white overflow-hidden rounded-2xl border border-[#26251e]">
         <video
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          src="/api/videos/refree_main_background.mp4"
+          src="/videos/refree_main_background.mp4"
           autoPlay
           muted
           loop

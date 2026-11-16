@@ -23,7 +23,7 @@ export const UserHomePage: React.FC = () => {
       <section className="mt-6 relative bg-[#1b1a15] text-white overflow-hidden rounded-2xl border border-[#26251e] px-8 py-12 md:px-14 md:py-16">
         <video
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          src="/api/videos/authorized_user_background.mp4"
+          src="/videos/authorized_user_background.mp4"
           autoPlay
           muted
           loop

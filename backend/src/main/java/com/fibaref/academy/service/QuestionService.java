@@ -278,19 +278,57 @@ public class QuestionService {
                 .replace("_", "\\_");
     }
 
+    private static final java.util.Set<String> STATIC_PUBLIC_VIDEOS = java.util.Set.of(
+            "refree_main_background.mp4",
+            "authorized_user_background.mp4",
+            "semicircle_5154.mp4",
+            "charge_8113.mp4",
+            "travel_8420.mp4",
+            "unsports_8416.mp4",
+            "shotclock_2989.mp4"
+    );
+
     private boolean isSeedVideo(String filename) {
-        return filename.startsWith("basketref_")
-                || filename.equals("refree_main_background.mp4")
-                || filename.equals("authorized_user_background.mp4")
-                || filename.equals("semicircle_5154.mp4")
-                || filename.equals("charge_8113.mp4")
-                || filename.equals("travel_8420.mp4")
-                || filename.equals("unsports_8416.mp4")
-                || filename.equals("shotclock_2989.mp4");
+        return filename.startsWith("basketref_") || STATIC_PUBLIC_VIDEOS.contains(filename);
+    }
+
+    /**
+     * Resolves video playback URL cleanly for both local disk dev and $0-bandwidth cloud streaming:
+     * - Static intro/legacy clips -> /videos/<filename> (served by Netlify/Vite CDN at $0 Render cost)
+     * - Remote Basketref cases when seed disk is absent -> direct HTTPS URL on jatekvezeto.hu ($0 Render & Netlify cost)
+     * - Admin DB uploads or local dev disk clips -> /api/videos/<filename>
+     */
+    private String resolveVideoUrl(Question q) {
+        String filename = q.getVideoFilename();
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+        if (STATIC_PUBLIC_VIDEOS.contains(filename)) {
+            return "/videos/" + filename;
+        }
+        if (!videoStorageService.isSeedVideoPresentOnDisk(filename)) {
+            String src = q.getSourceVideoUrl();
+            if (src != null && !src.isBlank()) {
+                String normalized = src.trim().replace(" ", "%20");
+                if (!normalized.contains("..")) {
+                    for (String prefix : new String[]{
+                            "https://www.basketref.com/media/",
+                            "http://www.basketref.com/media/",
+                            "http://www.jatekvezeto.hu/media/",
+                            "https://www.jatekvezeto.hu/media/"
+                    }) {
+                        if (normalized.startsWith(prefix)) {
+                            return "https://www.jatekvezeto.hu/media/" + normalized.substring(prefix.length());
+                        }
+                    }
+                }
+            }
+        }
+        return "/api/videos/" + filename;
     }
 
     private PublicQuestionResponse toPublicResponse(Question q) {
-        String videoUrl = q.getVideoFilename() != null ? "/api/videos/" + q.getVideoFilename() : null;
+        String videoUrl = resolveVideoUrl(q);
         List<PublicOptionResponse> opts = q.getOptions().stream()
                 .map(o -> new PublicOptionResponse(o.getId(), o.getSortOrder(), o.getOptionLabel()))
                 .toList();
@@ -301,7 +339,7 @@ public class QuestionService {
     }
 
     private AdminQuestionResponse toAdminResponse(Question q) {
-        String videoUrl = q.getVideoFilename() != null ? "/api/videos/" + q.getVideoFilename() : null;
+        String videoUrl = resolveVideoUrl(q);
         List<AdminOptionResponse> opts = q.getOptions().stream()
                 .map(o -> new AdminOptionResponse(o.getId(), o.getSortOrder(), o.getOptionLabel(), o.isCorrect(), o.getExplanation()))
                 .toList();

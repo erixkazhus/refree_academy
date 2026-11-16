@@ -136,6 +136,14 @@ public class VideoStorageService {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Video clip not found.");
     }
 
+    public boolean isSeedVideoPresentOnDisk(String filename) {
+        if (filename == null || filename.contains("..") || !SAFE_FILENAME.matcher(filename).matches()) {
+            return false;
+        }
+        Path inSeed = seedDir.resolve(filename).normalize();
+        return inSeed.startsWith(seedDir) && isValidReadableVideo(inSeed);
+    }
+
     public MediaType resolveMediaType(String filename) {
         if (filename != null && filename.toLowerCase().endsWith(".webm")) {
             return MediaType.parseMediaType("video/webm");
