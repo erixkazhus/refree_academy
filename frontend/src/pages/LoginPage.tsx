@@ -19,7 +19,7 @@ export const LoginPage: React.FC = () => {
     try {
       const profile = await api.login(email, password);
       setUser(profile);
-      navigate(profile.role === 'ADMIN' ? '/admin' : '/');
+      navigate('/');
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(err.message);

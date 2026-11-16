@@ -15,7 +15,7 @@ import { StudyPage } from './pages/StudyPage';
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="min-h-screen flex flex-col bg-white text-[#111111]">
           <Header />
           <div className="flex-1">

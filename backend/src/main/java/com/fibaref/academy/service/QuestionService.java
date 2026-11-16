@@ -189,7 +189,51 @@ public class QuestionService {
     }
 
     @Transactional(readOnly = true)
+    public AdminPagedQuestionsResponse listPagedAdminQuestions(
+            String category,
+            String search,
+            int page,
+            int size
+    ) {
+        PagedSlice slice = loadPagedSlice(category, search, page, size, false, null);
+        List<AdminQuestionResponse> items = slice.entities().stream()
+                .map(this::toAdminResponse)
+                .toList();
+        return new AdminPagedQuestionsResponse(
+                items,
+                slice.totalElements(),
+                slice.totalPages(),
+                slice.page(),
+                slice.size(),
+                slice.categories()
+        );
+    }
+
+    @Transactional(readOnly = true)
     public PagedQuestionsResponse listPagedQuestions(
+            String category,
+            String search,
+            int page,
+            int size,
+            boolean shuffle,
+            Long seed
+    ) {
+        PagedSlice slice = loadPagedSlice(category, search, page, size, shuffle, seed);
+        List<PublicQuestionResponse> items = slice.entities().stream()
+                .map(this::toPublicResponse)
+                .toList();
+        return new PagedQuestionsResponse(
+                items,
+                slice.totalElements(),
+                slice.totalPages(),
+                slice.page(),
+                slice.size(),
+                slice.seed(),
+                slice.categories()
+        );
+    }
+
+    private PagedSlice loadPagedSlice(
             String category,
             String search,
             int page,
@@ -225,9 +269,9 @@ public class QuestionService {
         int fromIdx = Math.min(safePage * safeSize, orderedIds.size());
         int toIdx = Math.min(fromIdx + safeSize, orderedIds.size());
 
-        List<PublicQuestionResponse> items;
+        List<Question> entities;
         if (fromIdx >= toIdx) {
-            items = List.of();
+            entities = List.of();
         } else {
             List<Long> pageIds = orderedIds.subList(fromIdx, toIdx);
             List<Question> fetched = questionRepository.findAllWithOptionsByIdIn(pageIds);
@@ -235,10 +279,9 @@ public class QuestionService {
             for (Question q : fetched) {
                 byId.put(q.getId(), q);
             }
-            items = pageIds.stream()
+            entities = pageIds.stream()
                     .map(byId::get)
                     .filter(q -> q != null)
-                    .map(this::toPublicResponse)
                     .toList();
         }
 
@@ -246,8 +289,18 @@ public class QuestionService {
                 .map(row -> new CategoryCountResponse((String) row[0], ((Number) row[1]).longValue()))
                 .toList();
 
-        return new PagedQuestionsResponse(items, totalElements, totalPages, safePage, safeSize, effectiveSeed, categories);
+        return new PagedSlice(entities, totalElements, totalPages, safePage, safeSize, effectiveSeed, categories);
     }
+
+    private record PagedSlice(
+            List<Question> entities,
+            long totalElements,
+            int totalPages,
+            int page,
+            int size,
+            long seed,
+            List<CategoryCountResponse> categories
+    ) {}
 
     @Transactional(readOnly = true)
     public Optional<String> findSourceVideoUrl(String filename) {

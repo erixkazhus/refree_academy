@@ -68,6 +68,15 @@ export interface AdminQuestion {
   options: AdminOption[];
 }
 
+export interface AdminPagedQuestionsResponse {
+  items: AdminQuestion[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+  categories: CategoryCount[];
+}
+
 export interface ApiErrorPayload {
   status: number;
   error: string;

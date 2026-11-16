@@ -113,4 +113,13 @@ public final class QuestionDtos {
             String videoUrl,
             List<AdminOptionResponse> options
     ) {}
+
+    public record AdminPagedQuestionsResponse(
+            List<AdminQuestionResponse> items,
+            long totalElements,
+            int totalPages,
+            int page,
+            int size,
+            List<CategoryCountResponse> categories
+    ) {}
 }

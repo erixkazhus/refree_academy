@@ -1,5 +1,6 @@
 package com.fibaref.academy.controller;
 
+import com.fibaref.academy.dto.QuestionDtos.AdminPagedQuestionsResponse;
 import com.fibaref.academy.dto.QuestionDtos.AdminQuestionResponse;
 import com.fibaref.academy.dto.QuestionDtos.AdminQuestionUpsertRequest;
 import com.fibaref.academy.service.QuestionService;
@@ -26,6 +27,16 @@ public class AdminQuestionController {
     @GetMapping
     public List<AdminQuestionResponse> listAll() {
         return questionService.listAdminQuestions();
+    }
+
+    @GetMapping("/paged")
+    public AdminPagedQuestionsResponse listPaged(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return questionService.listPagedAdminQuestions(category, search, page, size);
     }
 
     @PostMapping

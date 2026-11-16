@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiClientError } from '../api/client';
 import { FibaHalfCourtSvg, RefereeWhistleIcon } from '../components/CourtMotifs';
@@ -32,10 +32,15 @@ export const AdminPage: React.FC = () => {
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [loadingList, setLoadingList] = useState(false);
 
-  // Filter & pagination for the 1,884+ existing questions
+  // Filter & server-side pagination for the 1,884+ existing questions
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sectionFilter, setSectionFilter] = useState('All');
   const [listPage, setListPage] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalAllQuestions, setTotalAllQuestions] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const pagedSupportedRef = useRef(true);
 
   // Inline playable video toggle per existing question row
   const [playingQuestionId, setPlayingQuestionId] = useState<number | null>(null);
@@ -74,23 +79,70 @@ export const AdminPage: React.FC = () => {
     };
   }, [modalVideoFile]);
 
-  const loadQuestions = async () => {
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
+
+  const loadQuestions = useCallback(async () => {
+    if (user?.role !== 'ADMIN') return;
     setLoadingList(true);
+    setErrorMsg(null);
     try {
-      const data = await api.adminListQuestions();
-      setQuestions(data);
+      if (pagedSupportedRef.current) {
+        try {
+          const data = await api.adminListPagedQuestions({
+            category: sectionFilter,
+            search: debouncedSearch,
+            page: listPage,
+            size: PAGE_SIZE,
+          });
+          setQuestions(data.items);
+          setTotalElements(data.totalElements);
+          setTotalPages(Math.max(1, data.totalPages));
+          setTotalAllQuestions(
+            data.categories.reduce((acc, item) => acc + item.count, 0)
+          );
+          return;
+        } catch (pagedErr) {
+          if (!(pagedErr instanceof ApiClientError) || (pagedErr.status !== 404 && pagedErr.status !== 405)) {
+            throw pagedErr;
+          }
+          pagedSupportedRef.current = false;
+        }
+      }
+
+      // Fallback when running against a local backend container that has not been rebuilt with /paged yet
+      const all = await api.adminListQuestions();
+      const qLower = debouncedSearch.toLowerCase();
+      const filtered = all.filter((item) => {
+        if (sectionFilter !== 'All' && item.category !== sectionFilter) return false;
+        if (!qLower) return true;
+        return (
+          String(item.id).includes(qLower) ||
+          item.title.toLowerCase().includes(qLower) ||
+          item.ruleReference.toLowerCase().includes(qLower) ||
+          item.prompt.toLowerCase().includes(qLower)
+        );
+      });
+      const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      const clamped = Math.min(listPage, pages - 1);
+      setQuestions(filtered.slice(clamped * PAGE_SIZE, (clamped + 1) * PAGE_SIZE));
+      setTotalElements(filtered.length);
+      setTotalPages(pages);
+      setTotalAllQuestions(all.length);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Unable to load admin questions.');
     } finally {
       setLoadingList(false);
     }
-  };
+  }, [user?.role, sectionFilter, debouncedSearch, listPage]);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
-      loadQuestions();
-    }
-  }, [user]);
+    loadQuestions();
+  }, [loadQuestions]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -172,8 +224,8 @@ export const AdminPage: React.FC = () => {
         if (modalVideoFile) {
           saved = await api.adminUploadVideo(saved.id, modalVideoFile);
         }
-        setQuestions((prev) => [saved, ...prev]);
         setListPage(0);
+        await loadQuestions();
         setStatusMsg(
           modalVideoFile
             ? `Created question #${saved.id} with playable video "${modalVideoFile.name}".`
@@ -228,32 +280,17 @@ export const AdminPage: React.FC = () => {
     setStatusMsg(null);
     try {
       await api.adminDeleteQuestion(questionId);
-      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
       if (playingQuestionId === questionId) setPlayingQuestionId(null);
       if (editingId === questionId) closeModal();
+      await loadQuestions();
       setStatusMsg(`Deleted question #${questionId}.`);
     } catch (err) {
       setErrorMsg(err instanceof ApiClientError ? err.message : 'Delete failed.');
     }
   };
 
-  const filteredQuestions = useMemo(() => {
-    const qLower = searchQuery.trim().toLowerCase();
-    return questions.filter((item) => {
-      if (sectionFilter !== 'All' && item.category !== sectionFilter) return false;
-      if (!qLower) return true;
-      return (
-        String(item.id).includes(qLower) ||
-        item.title.toLowerCase().includes(qLower) ||
-        item.ruleReference.toLowerCase().includes(qLower) ||
-        item.prompt.toLowerCase().includes(qLower)
-      );
-    });
-  }, [questions, searchQuery, sectionFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredQuestions.length / PAGE_SIZE));
   const safePage = Math.min(listPage, totalPages - 1);
-  const pagedQuestions = filteredQuestions.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const pagedQuestions = questions;
 
   const activeModalVideoSrc =
     modalLocalPreviewUrl ?? (!removeExistingVideo ? existingVideoUrl : null);
@@ -319,8 +356,11 @@ export const AdminPage: React.FC = () => {
       <div className="mt-8 bg-white border border-[#e6e5e0] rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-medium m-0">
-            Manage Existing Rules &amp; Videos ({filteredQuestions.length.toLocaleString()}
-            {filteredQuestions.length !== questions.length ? ` of ${questions.length.toLocaleString()}` : ''})
+            Manage Existing Rules &amp; Videos ({totalElements.toLocaleString()}
+            {totalAllQuestions > 0 && totalElements !== totalAllQuestions
+              ? ` of ${totalAllQuestions.toLocaleString()}`
+              : ''}
+            )
           </h2>
           <p className="text-xs text-[#707072] mt-1 m-0">
             Play attached video clips inline, add/replace or remove videos, or edit questions and rulebook explanations.
@@ -380,7 +420,7 @@ export const AdminPage: React.FC = () => {
                     <div className="text-lg font-medium text-[#26251e]">{q.title}</div>
                     <p className="text-sm text-[#5a5852] m-0">{q.prompt}</p>
                     <div className={`text-xs pt-1 font-mono-clock font-medium ${q.videoUrl ? 'text-[#1f8a65]' : 'text-[#807d72]'}`}>
-                      {q.videoUrl ? `Attached video: ${q.videoUrl}` : 'No video attached'}
+                      {q.videoUrl ? 'Video clip attached' : 'No video attached'}
                     </div>
                   </div>
 
@@ -610,7 +650,7 @@ export const AdminPage: React.FC = () => {
                       {modalVideoFile
                         ? `Selected file: ${modalVideoFile.name} (${(modalVideoFile.size / 1048576).toFixed(2)} MB)`
                         : !removeExistingVideo && existingVideoUrl
-                        ? `Attached video: ${existingVideoUrl}`
+                        ? 'Video clip currently attached'
                         : 'No video selected. Upload an MP4 or WebM clip to preview and attach it.'}
                     </div>
                   </div>

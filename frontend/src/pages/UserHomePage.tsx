@@ -22,14 +22,14 @@ export const UserHomePage: React.FC = () => {
       {/* Signed-In Referee Arena Hero Banner */}
       <section className="mt-6 relative bg-[#1b1a15] text-white overflow-hidden rounded-2xl border border-[#26251e] px-8 py-12 md:px-14 md:py-16">
         <video
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none"
           src="/videos/authorized_user_background.mp4"
           autoPlay
           muted
           loop
           playsInline
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1b1a15]/92 via-[#1b1a15]/75 to-[#1b1a15]/45 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1b1a15]/95 via-[#1b1a15]/75 to-[#1b1a15]/45 pointer-events-none" />
         <FibaHalfCourtSvg
           className="hidden lg:block absolute right-10 -bottom-6 w-[440px] h-[290px] opacity-40 pointer-events-none"
           strokeColor="rgba(247,247,244,0.22)"

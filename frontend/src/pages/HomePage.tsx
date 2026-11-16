@@ -21,14 +21,14 @@ export const HomePage: React.FC = () => {
       {/* Arena Hero Banner with Half-Court Lines Overlay & Video */}
       <section className="mt-6 relative bg-[#1b1a15] text-white overflow-hidden rounded-2xl border border-[#26251e]">
         <video
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover opacity-50 pointer-events-none"
           src="/videos/refree_main_background.mp4"
           autoPlay
           muted
           loop
           playsInline
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1b1a15]/92 via-[#1b1a15]/75 to-[#1b1a15]/40 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1b1a15]/95 via-[#1b1a15]/75 to-[#1b1a15]/45 pointer-events-none" />
         <FibaHalfCourtSvg
           className="hidden lg:block absolute right-0 bottom-0 w-[480px] h-[320px] opacity-65 pointer-events-none"
           strokeColor="rgba(247,247,244,0.22)"

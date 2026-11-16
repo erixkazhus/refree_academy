@@ -1,4 +1,5 @@
 import {
+  AdminPagedQuestionsResponse,
   AdminQuestion,
   AnswerEvaluation,
   ApiErrorPayload,
@@ -86,6 +87,13 @@ export const api = {
 
   adminListQuestions: () => request<AdminQuestion[]>('/api/admin/questions'),
 
+  adminListPagedQuestions: (params: {
+    category?: string;
+    search?: string;
+    page?: number;
+    size?: number;
+  }) => request<AdminPagedQuestionsResponse>(`/api/admin/questions/paged?${buildPagedQuery(params)}`),
+
   adminCreateQuestion: (payload: Omit<AdminQuestion, 'id' | 'videoUrl'>) =>
     request<AdminQuestion>('/api/admin/questions', {
       method: 'POST',
@@ -119,16 +127,7 @@ export const api = {
     size?: number;
     shuffle?: boolean;
     seed?: number;
-  }) => {
-    const qs = new URLSearchParams();
-    if (params.category && params.category !== 'All') qs.set('category', params.category);
-    if (params.search && params.search.trim()) qs.set('search', params.search.trim());
-    if (typeof params.page === 'number') qs.set('page', String(params.page));
-    if (typeof params.size === 'number') qs.set('size', String(params.size));
-    if (params.shuffle) qs.set('shuffle', 'true');
-    if (typeof params.seed === 'number') qs.set('seed', String(params.seed));
-    return request<PagedQuestionsResponse>(`/api/questions/paged?${qs.toString()}`);
-  },
+  }) => request<PagedQuestionsResponse>(`/api/questions/paged?${buildPagedQuery(params)}`),
 
   getRulebook: () => request<RulebookBundle>('/api/rulebook'),
 
@@ -137,3 +136,21 @@ export const api = {
       method: 'DELETE',
     }),
 };
+
+function buildPagedQuery(params: {
+  category?: string;
+  search?: string;
+  page?: number;
+  size?: number;
+  shuffle?: boolean;
+  seed?: number;
+}): string {
+  const qs = new URLSearchParams();
+  if (params.category && params.category !== 'All') qs.set('category', params.category);
+  if (params.search && params.search.trim()) qs.set('search', params.search.trim());
+  if (typeof params.page === 'number') qs.set('page', String(params.page));
+  if (typeof params.size === 'number') qs.set('size', String(params.size));
+  if (params.shuffle) qs.set('shuffle', 'true');
+  if (typeof params.seed === 'number') qs.set('seed', String(params.seed));
+  return qs.toString();
+}
