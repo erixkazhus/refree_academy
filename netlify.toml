@@ -4,10 +4,9 @@
   publish = "dist"
 
 # Proxy API & video/PDF endpoints to your Render Java backend (keeps auth cookies same-site)
-# Replace YOUR-RENDER-SERVICE with your actual *.onrender.com service name
 [[redirects]]
   from = "/api/*"
-  to = "https://YOUR-RENDER-SERVICE.onrender.com/api/:splat"
+  to = "https://fiba-referee-backend.onrender.com/api/:splat"
   status = 200
   force = true
 
