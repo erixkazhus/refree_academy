@@ -1,3 +1,19 @@
+<img width="1828" height="866" alt="image" src="https://github.com/user-attachments/assets/3544608e-dcaf-4236-a3a7-ade228478265" />
+<img width="1531" height="884" alt="image" src="https://github.com/user-attachments/assets/22056d64-f88c-4fc0-882a-628687676713" />
+<img width="1451" height="808" alt="image" src="https://github.com/user-attachments/assets/2f81ab16-d64b-48ea-bf4f-8da3b9fb71d0" />
+<img width="1525" height="641" alt="image" src="https://github.com/user-attachments/assets/013a7cb0-043b-49d8-b887-28d6521eb0f6" />
+<img width="1539" height="821" alt="image" src="https://github.com/user-attachments/assets/c127406e-90cb-426e-a031-9de9c4ae9f9d" />
+<img width="902" height="865" alt="image" src="https://github.com/user-attachments/assets/688287b5-269c-499f-8a9f-b43635c3d3fd" />
+<img width="944" height="903" alt="image" src="https://github.com/user-attachments/assets/3b017740-d21a-4bce-bb32-33afb0d1b064" />
+
+
+
+
+
+
+
+
+
 # FIBA Referee Academy
 
 Video-assisted FIBA Basketball Rulebook learning platform built with **Java 21 + Spring Boot 3**, **React + TypeScript + Vite**, and **PostgreSQL**, styled using the `nike` design system in [`DESIGN.md`](./DESIGN.md).
